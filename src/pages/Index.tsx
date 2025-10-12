@@ -221,6 +221,7 @@ const Index = () => {
   const [totalAnswered, setTotalAnswered] = useState(42);
   const [correctAnswers, setCorrectAnswers] = useState(35);
   const [streak, setStreak] = useState(5);
+  const [earnedReward, setEarnedReward] = useState<number | null>(null);
   const [history, setHistory] = useState<Array<{question: string, correct: boolean, reward: number}>>([
     { question: 'Столица Франции?', correct: true, reward: 5 },
     { question: 'Автор "Мастер и Маргарита"?', correct: true, reward: 7 },
@@ -255,9 +256,11 @@ const Index = () => {
       setBalance(prev => prev + question.reward);
       setCorrectAnswers(prev => prev + 1);
       setStreak(prev => prev + 1);
+      setEarnedReward(question.reward);
       setHistory(prev => [{question: question.question, correct: true, reward: question.reward}, ...prev.slice(0, 9)]);
     } else {
       setStreak(0);
+      setEarnedReward(null);
       setHistory(prev => [{question: question.question, correct: false, reward: 0}, ...prev.slice(0, 9)]);
     }
     setTotalAnswered(prev => prev + 1);
@@ -267,6 +270,7 @@ const Index = () => {
     setCurrentQuestion((prev) => (prev + 1) % filteredQuestions.length);
     setSelectedAnswer(null);
     setShowResult(false);
+    setEarnedReward(null);
   };
 
   const question = filteredQuestions[currentQuestion];
@@ -405,7 +409,17 @@ const Index = () => {
                 })}
 
                 {showResult && (
-                  <div className="pt-4">
+                  <div className="pt-4 space-y-4">
+                    {earnedReward !== null && (
+                      <div className="flex items-center justify-center gap-3 p-4 bg-accent/10 rounded-lg border-2 border-accent animate-in fade-in zoom-in duration-500">
+                        <Icon name="Sparkles" size={28} className="text-accent" />
+                        <div className="text-center">
+                          <p className="text-sm text-muted-foreground font-medium">Заработано</p>
+                          <p className="text-3xl font-bold text-accent">+{earnedReward} ₽</p>
+                        </div>
+                        <Icon name="Coins" size={28} className="text-accent" />
+                      </div>
+                    )}
                     <Button onClick={nextQuestion} className="w-full" size="lg">
                       Следующий вопрос
                       <Icon name="ArrowRight" size={18} className="ml-2" />
