@@ -214,6 +214,7 @@ const LEADERBOARD = [
 const Index = () => {
   const [activeTab, setActiveTab] = useState('quiz');
   const [balance, setBalance] = useState(850);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -226,13 +227,28 @@ const Index = () => {
     { question: 'Год основания Москвы?', correct: false, reward: 0 },
   ]);
 
+  const filteredQuestions = selectedCategory 
+    ? QUESTIONS.filter(q => q.category === selectedCategory)
+    : QUESTIONS;
+
+  const handleCategorySelect = (category: string) => {
+    if (selectedCategory === category) {
+      setSelectedCategory(null);
+    } else {
+      setSelectedCategory(category);
+      setCurrentQuestion(0);
+      setSelectedAnswer(null);
+      setShowResult(false);
+    }
+  };
+
   const handleAnswer = (index: number) => {
     if (showResult) return;
     
     setSelectedAnswer(index);
     setShowResult(true);
     
-    const question = QUESTIONS[currentQuestion];
+    const question = filteredQuestions[currentQuestion];
     const isCorrect = index === question.correct;
     
     if (isCorrect) {
@@ -248,12 +264,12 @@ const Index = () => {
   };
 
   const nextQuestion = () => {
-    setCurrentQuestion((prev) => (prev + 1) % QUESTIONS.length);
+    setCurrentQuestion((prev) => (prev + 1) % filteredQuestions.length);
     setSelectedAnswer(null);
     setShowResult(false);
   };
 
-  const question = QUESTIONS[currentQuestion];
+  const question = filteredQuestions[currentQuestion];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
@@ -348,9 +364,10 @@ const Index = () => {
                   </Badge>
                 </div>
                 <CardTitle className="text-2xl leading-tight">{question.question}</CardTitle>
-                <Progress value={((currentQuestion + 1) / QUESTIONS.length) * 100} className="mt-4" />
+                <Progress value={((currentQuestion + 1) / filteredQuestions.length) * 100} className="mt-4" />
                 <CardDescription className="mt-2">
-                  Вопрос {currentQuestion + 1} из {QUESTIONS.length}
+                  Вопрос {currentQuestion + 1} из {filteredQuestions.length}
+                  {selectedCategory && <span className="ml-2 text-primary font-semibold">· {selectedCategory}</span>}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -400,18 +417,53 @@ const Index = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icon name="Filter" size={20} />
-                  Категории
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Icon name="Filter" size={20} />
+                    Категории
+                  </span>
+                  {selectedCategory && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedCategory(null);
+                        setCurrentQuestion(0);
+                        setSelectedAnswer(null);
+                        setShowResult(false);
+                      }}
+                      className="text-sm"
+                    >
+                      <Icon name="X" size={16} className="mr-1" />
+                      Сбросить
+                    </Button>
+                  )}
                 </CardTitle>
+                <CardDescription>
+                  {selectedCategory ? `Выбрано: ${selectedCategory}` : 'Выберите категорию или играйте со всеми вопросами'}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {CATEGORIES.map((cat) => (
-                    <Badge key={cat} variant="outline" className="px-4 py-2 text-sm hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors">
-                      {cat}
-                    </Badge>
-                  ))}
+                  {CATEGORIES.map((cat) => {
+                    const isActive = selectedCategory === cat;
+                    const categoryCount = QUESTIONS.filter(q => q.category === cat).length;
+                    return (
+                      <Badge 
+                        key={cat} 
+                        variant={isActive ? "default" : "outline"}
+                        onClick={() => handleCategorySelect(cat)}
+                        className={`px-4 py-2 text-sm cursor-pointer transition-all ${
+                          isActive 
+                            ? 'bg-primary text-primary-foreground shadow-md' 
+                            : 'hover:bg-primary/10 hover:border-primary'
+                        }`}
+                      >
+                        {cat}
+                        <span className="ml-2 opacity-70 text-xs">({categoryCount})</span>
+                      </Badge>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
