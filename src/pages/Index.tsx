@@ -282,7 +282,7 @@ const Index = () => {
     }
   };
 
-  const playSound = (type: 'correct' | 'wrong') => {
+  const playSound = (type: 'correct' | 'wrong' | 'bonus') => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
@@ -298,6 +298,17 @@ const Index = () => {
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.4);
+    } else if (type === 'bonus') {
+      // Восходящая мелодия для бонуса
+      oscillator.frequency.setValueAtTime(392, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime + 0.1);
+      oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.2);
+      oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.3);
+      oscillator.frequency.setValueAtTime(1046.5, audioContext.currentTime + 0.4);
+      gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.6);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.6);
     } else {
       oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
       oscillator.frequency.setValueAtTime(200, audioContext.currentTime + 0.15);
@@ -335,6 +346,7 @@ const Index = () => {
       if (bonusTime > 0) {
         setTimeLeft(prev => prev + bonusTime);
         setTimeBonus(bonusTime);
+        playSound('bonus');
         setTimeout(() => setTimeBonus(null), 3000);
       }
       
