@@ -8,6 +8,14 @@ import Icon from '@/components/ui/icon';
 
 const CATEGORIES = ['История', 'География', 'Наука', 'Спорт', 'Культура', 'Технологии'];
 
+type Difficulty = 'easy' | 'medium' | 'hard';
+
+const DIFFICULTY_CONFIG = {
+  easy: { label: 'Легкий', multiplier: 1, color: 'bg-green-500', icon: 'Smile' },
+  medium: { label: 'Средний', multiplier: 2, color: 'bg-yellow-500', icon: 'Zap' },
+  hard: { label: 'Сложный', multiplier: 3, color: 'bg-red-500', icon: 'Flame' },
+};
+
 const QUESTIONS = [
   {
     id: 1,
@@ -215,6 +223,8 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState('quiz');
   const [balance, setBalance] = useState(850);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
+  const [showDifficultySelect, setShowDifficultySelect] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -269,6 +279,7 @@ const Index = () => {
     setShowResult(false);
     setHistory([]);
     setTimeBonus(null);
+    setShowDifficultySelect(true);
   };
 
   const handleCategorySelect = (category: string) => {
@@ -330,11 +341,12 @@ const Index = () => {
     
     if (isCorrect) {
       playSound('correct');
-      setBalance(prev => prev + question.reward);
+      const actualReward = question.reward * DIFFICULTY_CONFIG[difficulty].multiplier;
+      setBalance(prev => prev + actualReward);
       setCorrectAnswers(prev => prev + 1);
       const newStreak = streak + 1;
       setStreak(newStreak);
-      setEarnedReward(question.reward);
+      setEarnedReward(actualReward);
       
       // Бонусное время за серию правильных ответов
       let bonusTime = 0;
@@ -350,7 +362,7 @@ const Index = () => {
         setTimeout(() => setTimeBonus(null), 3000);
       }
       
-      setHistory(prev => [{question: question.question, correct: true, reward: question.reward}, ...prev.slice(0, 9)]);
+      setHistory(prev => [{question: question.question, correct: true, reward: actualReward}, ...prev.slice(0, 9)]);
     } else {
       playSound('wrong');
       setStreak(0);
@@ -376,7 +388,15 @@ const Index = () => {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-4xl font-bold text-foreground mb-2">КВИЗ</h1>
-              <p className="text-muted-foreground">Профессиональная викторина с реальными выплатами</p>
+              <div className="flex items-center gap-3">
+                <p className="text-muted-foreground">Профессиональная викторина с реальными выплатами</p>
+                {!showDifficultySelect && (
+                  <Badge className={`${DIFFICULTY_CONFIG[difficulty].color} text-white border-0 cursor-pointer`} onClick={() => setShowDifficultySelect(true)}>
+                    <Icon name={DIFFICULTY_CONFIG[difficulty].icon as any} size={14} className="mr-1" />
+                    {DIFFICULTY_CONFIG[difficulty].label}
+                  </Badge>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <Card className={`border-2 transition-all ${
@@ -475,6 +495,38 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="quiz" className="space-y-6">
+            {showDifficultySelect && (
+              <Card className="border-2 border-primary">
+                <CardHeader>
+                  <CardTitle className="text-2xl">Выберите уровень сложности</CardTitle>
+                  <CardDescription>Более сложные вопросы дают больше баллов</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {(Object.keys(DIFFICULTY_CONFIG) as Difficulty[]).map((diff) => {
+                    const config = DIFFICULTY_CONFIG[diff];
+                    return (
+                      <Button
+                        key={diff}
+                        onClick={() => {
+                          setDifficulty(diff);
+                          setShowDifficultySelect(false);
+                        }}
+                        variant={difficulty === diff ? 'default' : 'outline'}
+                        className="h-auto py-6 flex-col gap-3"
+                      >
+                        <div className={`w-16 h-16 rounded-full ${config.color} flex items-center justify-center`}>
+                          <Icon name={config.icon as any} size={32} className="text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xl font-bold">{config.label}</p>
+                          <p className="text-sm opacity-70">x{config.multiplier} к наградам</p>
+                        </div>
+                      </Button>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
             {!isGameActive && (
               <Card className="border-4 border-destructive bg-destructive/5">
                 <CardContent className="p-8 text-center">
@@ -495,9 +547,14 @@ const Index = () => {
                   <Badge variant="secondary" className="text-sm px-3 py-1">
                     {question.category}
                   </Badge>
-                  <Badge className="text-sm px-3 py-1 bg-gradient-to-r from-primary to-accent border-0 text-white">
-                    +{question.reward} ₽
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={`text-xs px-2 py-1 ${DIFFICULTY_CONFIG[difficulty].color} text-white border-0`}>
+                      {DIFFICULTY_CONFIG[difficulty].label}
+                    </Badge>
+                    <Badge className="text-sm px-3 py-1 bg-gradient-to-r from-primary to-accent border-0 text-white">
+                      +{question.reward * DIFFICULTY_CONFIG[difficulty].multiplier} ₽
+                    </Badge>
+                  </div>
                 </div>
                 <CardTitle className="text-2xl leading-tight">{question.question}</CardTitle>
                 <Progress value={((currentQuestion + 1) / filteredQuestions.length) * 100} className="mt-4" />
