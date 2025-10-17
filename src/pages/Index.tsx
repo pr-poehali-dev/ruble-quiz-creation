@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -222,6 +222,8 @@ const Index = () => {
   const [correctAnswers, setCorrectAnswers] = useState(35);
   const [streak, setStreak] = useState(5);
   const [earnedReward, setEarnedReward] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState(1800);
+  const [isGameActive, setIsGameActive] = useState(true);
   const [history, setHistory] = useState<Array<{question: string, correct: boolean, reward: number}>>([
     { question: 'Столица Франции?', correct: true, reward: 5 },
     { question: 'Автор "Мастер и Маргарита"?', correct: true, reward: 7 },
@@ -231,6 +233,41 @@ const Index = () => {
   const filteredQuestions = selectedCategory 
     ? QUESTIONS.filter(q => q.category === selectedCategory)
     : QUESTIONS;
+
+  useEffect(() => {
+    if (!isGameActive || timeLeft <= 0) return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          setIsGameActive(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isGameActive, timeLeft]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const resetGame = () => {
+    setTimeLeft(1800);
+    setIsGameActive(true);
+    setBalance(0);
+    setTotalAnswered(0);
+    setCorrectAnswers(0);
+    setStreak(0);
+    setCurrentQuestion(0);
+    setSelectedAnswer(null);
+    setShowResult(false);
+    setHistory([]);
+  };
 
   const handleCategorySelect = (category: string) => {
     if (selectedCategory === category) {
@@ -270,7 +307,7 @@ const Index = () => {
   };
 
   const handleAnswer = (index: number) => {
-    if (showResult) return;
+    if (showResult || !isGameActive) return;
     
     setSelectedAnswer(index);
     setShowResult(true);
@@ -313,6 +350,19 @@ const Index = () => {
               <p className="text-muted-foreground">Профессиональная викторина с реальными выплатами</p>
             </div>
             <div className="flex items-center gap-4">
+              <Card className={`border-2 transition-all ${
+                timeLeft <= 60 ? 'bg-gradient-to-r from-red-500 to-orange-500 border-red-600 animate-pulse' :
+                timeLeft <= 300 ? 'bg-gradient-to-r from-orange-500 to-yellow-500 border-orange-600' :
+                'bg-gradient-to-r from-blue-500 to-indigo-500 border-blue-600'
+              }`}>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <Icon name="Clock" size={32} className="text-white" />
+                  <div>
+                    <p className="text-xs text-white/80 font-medium">Время</p>
+                    <p className="text-2xl font-bold text-white">{formatTime(timeLeft)}</p>
+                  </div>
+                </CardContent>
+              </Card>
               <Card className="bg-gradient-to-r from-primary to-accent border-0">
                 <CardContent className="p-4 flex items-center gap-3">
                   <Icon name="Coins" size={32} className="text-primary-foreground" />
@@ -385,6 +435,20 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="quiz" className="space-y-6">
+            {!isGameActive && (
+              <Card className="border-4 border-destructive bg-destructive/5">
+                <CardContent className="p-8 text-center">
+                  <Icon name="Clock" size={64} className="mx-auto mb-4 text-destructive" />
+                  <h2 className="text-3xl font-bold mb-2">Время вышло!</h2>
+                  <p className="text-xl mb-4 text-muted-foreground">Вы заработали: <span className="font-bold text-accent">{balance} ₽</span></p>
+                  <p className="mb-6">Правильных ответов: {correctAnswers} из {totalAnswered}</p>
+                  <Button onClick={resetGame} size="lg" className="gap-2">
+                    <Icon name="RotateCcw" size={20} />
+                    Начать новую игру
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
             <Card className="border-2">
               <CardHeader>
                 <div className="flex items-center justify-between mb-4">
@@ -402,7 +466,12 @@ const Index = () => {
                   {selectedCategory && <span className="ml-2 text-primary font-semibold">· {selectedCategory}</span>}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 relative">
+                {!isGameActive && (
+                  <div className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
+                    <p className="text-2xl font-bold">Игра окончена</p>
+                  </div>
+                )}
                 {question.options.map((option, index) => {
                   const isSelected = selectedAnswer === index;
                   const isCorrect = index === question.correct;
