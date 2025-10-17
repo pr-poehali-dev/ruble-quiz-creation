@@ -224,6 +224,7 @@ const Index = () => {
   const [earnedReward, setEarnedReward] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(1800);
   const [isGameActive, setIsGameActive] = useState(true);
+  const [timeBonus, setTimeBonus] = useState<number | null>(null);
   const [history, setHistory] = useState<Array<{question: string, correct: boolean, reward: number}>>([
     { question: 'Столица Франции?', correct: true, reward: 5 },
     { question: 'Автор "Мастер и Маргарита"?', correct: true, reward: 7 },
@@ -267,6 +268,7 @@ const Index = () => {
     setSelectedAnswer(null);
     setShowResult(false);
     setHistory([]);
+    setTimeBonus(null);
   };
 
   const handleCategorySelect = (category: string) => {
@@ -319,8 +321,23 @@ const Index = () => {
       playSound('correct');
       setBalance(prev => prev + question.reward);
       setCorrectAnswers(prev => prev + 1);
-      setStreak(prev => prev + 1);
+      const newStreak = streak + 1;
+      setStreak(newStreak);
       setEarnedReward(question.reward);
+      
+      // Бонусное время за серию правильных ответов
+      let bonusTime = 0;
+      if (newStreak === 3) bonusTime = 30;
+      else if (newStreak === 5) bonusTime = 60;
+      else if (newStreak === 10) bonusTime = 120;
+      else if (newStreak % 15 === 0) bonusTime = 180;
+      
+      if (bonusTime > 0) {
+        setTimeLeft(prev => prev + bonusTime);
+        setTimeBonus(bonusTime);
+        setTimeout(() => setTimeBonus(null), 3000);
+      }
+      
       setHistory(prev => [{question: question.question, correct: true, reward: question.reward}, ...prev.slice(0, 9)]);
     } else {
       playSound('wrong');
@@ -373,6 +390,17 @@ const Index = () => {
                 </CardContent>
               </Card>
             </div>
+            {timeBonus && (
+              <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 animate-bounce">
+                <Card className="border-4 border-green-500 bg-green-50 dark:bg-green-950 shadow-2xl">
+                  <CardContent className="p-6 text-center">
+                    <Icon name="Clock" size={48} className="mx-auto mb-2 text-green-600" />
+                    <p className="text-3xl font-bold text-green-600 mb-1">+{timeBonus} сек!</p>
+                    <p className="text-sm text-green-700 dark:text-green-400">Бонус за серию {streak} 🔥</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
